@@ -1,10 +1,28 @@
 import socket
+import threading
 
-HOST = '127.0.0.1'
-PORT = 65432
+def handle_client(conn, addr):
+    print(f"[NEW CONNECTION] {addr} connected.")
+    with conn:
+        while True:
+            try:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                conn.sendall(b"Acknowledged")
+            except socket.error:
+                break
+    print(f"[DISCONNECTED] {addr} disconnected.")
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-    client_socket.connect((HOST, PORT))
-    client_socket.sendall(b"Hello, this is a local test message.")
-    response = client_socket.recv(1024)
-    print(f"Server response: {response.decode('utf-8')}")
+def start_server():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('127.0.0.1', 65432))
+    server.listen()
+    print("[LISTENING] Server is waiting for connections...")
+    
+    while True:
+        conn, addr = server.accept()
+        # Create a new thread dedicated to handling the specific client
+        thread = threading.Thread(target=handle_client, args=(conn, addr))
+        thread.start()
+        print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
